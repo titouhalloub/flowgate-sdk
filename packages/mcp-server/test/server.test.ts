@@ -1,3 +1,6 @@
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface MockTransport {
@@ -125,5 +128,66 @@ describe('flowgate MCP server', () => {
     const result = await handleTool(fakeClient([]), 'not_a_tool', {});
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain('unknown tool "not_a_tool"');
+  });
+
+  // Regression test for 0.1.0: main() resolved after connect(), and the entry
+  // point's .then() called process.exit(0), killing the process before any
+  // client could send a message. Spawns the real built binary and drives a
+  // genuine MCP initialize handshake over stdio.
+  it('spawned server responds to MCP initialize and stays alive', async () => {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const bin = path.resolve(here, '..', 'dist', 'index.js');
+
+    const child = spawn(process.execPath, [bin], {
+      env: { ...process.env, FLOWGATE_API_KEY: 'test-key' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    const init =
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test', version: '1.0' },
+        },
+      }) + '\n';
+
+    child.stdin.write(init);
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error('No response within 15s — server likely exited')),
+          15000,
+        );
+        const check = (): void => {
+          if (stdout.includes('"id":1') || stdout.includes('"id": 1')) {
+            clearTimeout(timer);
+            resolve();
+          }
+        };
+        child.stdout.on('data', check);
+        child.on('exit', (code) => {
+          if (!stdout.includes('"id"')) {
+            clearTimeout(timer);
+            reject(new Error(`Server exited (code ${code}) before responding`));
+          }
+        });
+      });
+
+      // Still running after answering — this is the actual 0.1.0 regression.
+      expect(child.exitCode).toBeNull();
+      expect(child.killed).toBe(false);
+    } finally {
+      child.kill();
+    }
   });
 });

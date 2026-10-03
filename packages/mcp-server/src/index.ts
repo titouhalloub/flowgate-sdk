@@ -132,6 +132,10 @@ export async function main(): Promise<number> {
   const server = buildServer(new Flowgate({ apiKey }));
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  // connect() resolves once the transport is wired up — it does NOT block.
+  // Resuming stdin guarantees the event loop stays alive for the whole
+  // session, so the process lingers until the client closes the connection.
+  process.stdin.resume();
   return 0;
 }
 
@@ -141,7 +145,11 @@ const isDirectRun = entry !== undefined && import.meta.url === pathToFileURL(ent
 if (isDirectRun) {
   main()
     .then((code) => {
-      process.exit(code);
+      if (code !== 0) {
+        process.exit(code);
+      }
+      // Success: do NOT exit. The StdioServerTransport keeps stdin open,
+      // which keeps the Node event loop alive for the lifetime of the session.
     })
     .catch((error: unknown) => {
       process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
