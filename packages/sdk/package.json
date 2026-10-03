@@ -13,8 +13,17 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/titouhalloub/flowgate-sdk.git"
+  },
   "engines": {
     "node": ">=20"
   },

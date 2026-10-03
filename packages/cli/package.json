@@ -5,11 +5,20 @@
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "flowgate": "./dist/index.js"
+    "flowgate": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/titouhalloub/flowgate-sdk.git"
+  },
   "engines": {
     "node": ">=20"
   },
