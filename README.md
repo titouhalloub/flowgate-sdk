@@ -8,9 +8,9 @@ This is a pnpm monorepo containing three packages:
 
 | Package | Description |
 | --- | --- |
-| [`@flowgate/sdk`](packages/sdk) | Type-safe client generated from the OpenAPI spec |
-| [`@flowgate/cli`](packages/cli) | The `flowgate` command-line interface |
-| [`@flowgate/mcp-server`](packages/mcp-server) | Model Context Protocol server (stdio) |
+| [`@iflowgate/sdk`](packages/sdk) | Type-safe client generated from the OpenAPI spec |
+| [`@iflowgate/cli`](packages/cli) | The `flowgate` command-line interface |
+| [`@iflowgate/mcp-server`](packages/mcp-server) | Model Context Protocol server (stdio) |
 
 ## API access
 
@@ -21,7 +21,7 @@ access for evaluation, contact reda.halloub@gmail.com.
 ## Installation
 
 ```bash
-npm install @flowgate/sdk @flowgate/cli
+npm install @iflowgate/sdk @iflowgate/cli
 ```
 
 > **Note:** these packages are not yet published to npm. They are currently
@@ -31,7 +31,7 @@ npm install @flowgate/sdk @flowgate/cli
 ## SDK quickstart
 
 ```ts
-import { Flowgate } from '@flowgate/sdk';
+import { Flowgate } from '@iflowgate/sdk';
 
 const fg = new Flowgate({ apiKey: process.env.FLOWGATE_API_KEY });
 
@@ -50,7 +50,7 @@ Non-2xx responses throw a `FlowgateError` carrying the HTTP `status`, the
 parsed `detail` from the API, and the `endpoint` that was called.
 
 ```ts
-import { Flowgate, FlowgateError } from '@flowgate/sdk';
+import { Flowgate, FlowgateError } from '@iflowgate/sdk';
 
 try {
   await fg.capTable.get('Unknown Issuer');
@@ -98,10 +98,10 @@ flowgate issuers --json
 
 ## MCP server
 
-`@flowgate/mcp-server` exposes Flowgate as read-only tools over stdio, so an
+`@iflowgate/mcp-server` exposes Flowgate as read-only tools over stdio, so an
 LLM client can query the API directly.
 
-> **Note:** `@flowgate/mcp-server` is not yet published to npm. Until it is,
+> **Note:** `@iflowgate/mcp-server` is not yet published to npm. Until it is,
 > run it from a local build (`node packages/mcp-server/dist/index.js`) instead
 > of via npx.
 
@@ -112,7 +112,7 @@ Add it to your MCP client configuration:
   "mcpServers": {
     "flowgate": {
       "command": "npx",
-      "args": ["-y", "@flowgate/mcp-server"],
+      "args": ["-y", "@iflowgate/mcp-server"],
       "env": { "FLOWGATE_API_KEY": "<your-api-key>" }
     }
   }

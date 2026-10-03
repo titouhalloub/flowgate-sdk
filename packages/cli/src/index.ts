@@ -8,7 +8,7 @@
  */
 import { pathToFileURL } from 'node:url';
 import { Command } from 'commander';
-import { Flowgate } from '@flowgate/sdk';
+import { Flowgate } from '@iflowgate/sdk';
 import { CliError, handleError, printResult, requireClient, withSpinner } from './output.js';
 
 /** Runs an async command body, converting thrown errors into exit codes. */

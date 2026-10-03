@@ -1,5 +1,5 @@
 {
-  "name": "@flowgate/cli",
+  "name": "@iflowgate/cli",
   "version": "0.1.0",
   "description": "Flowgate command-line interface.",
   "license": "Apache-2.0",
@@ -18,10 +18,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "regen": "echo \"@flowgate/cli: no schema to regen\""
+    "regen": "echo \"@iflowgate/cli: no schema to regen\""
   },
   "dependencies": {
-    "@flowgate/sdk": "workspace:*",
+    "@iflowgate/sdk": "workspace:*",
     "chalk": "5.6.2",
     "commander": "12.1.0",
     "ora": "8.2.0"

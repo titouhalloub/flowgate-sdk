@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { Flowgate } from '@flowgate/sdk';
+import { Flowgate } from '@iflowgate/sdk';
 
 /**
  * The subset of the SDK used by the MCP tools. Typed structurally so tests

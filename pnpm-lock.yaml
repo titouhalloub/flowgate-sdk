@@ -10,7 +10,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@flowgate/sdk':
+      '@iflowgate/sdk':
         specifier: workspace:*
         version: link:../sdk
       chalk:
@@ -35,7 +35,7 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@flowgate/sdk':
+      '@iflowgate/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@modelcontextprotocol/sdk':

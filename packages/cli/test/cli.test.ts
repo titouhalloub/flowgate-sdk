@@ -15,7 +15,7 @@ const fakeClient = {
   compliance: { rules: vi.fn().mockResolvedValue([]) },
 };
 
-vi.mock('@flowgate/sdk', () => {
+vi.mock('@iflowgate/sdk', () => {
   class FlowgateError extends Error {
     readonly status: number;
     readonly detail: string;

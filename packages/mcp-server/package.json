@@ -1,5 +1,5 @@
 {
-  "name": "@flowgate/mcp-server",
+  "name": "@iflowgate/mcp-server",
   "version": "0.1.0",
   "description": "Flowgate Model Context Protocol server.",
   "license": "Apache-2.0",
@@ -18,10 +18,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "regen": "echo \"@flowgate/mcp-server: no schema to regen\""
+    "regen": "echo \"@iflowgate/mcp-server: no schema to regen\""
   },
   "dependencies": {
-    "@flowgate/sdk": "workspace:*",
+    "@iflowgate/sdk": "workspace:*",
     "@modelcontextprotocol/sdk": "1.32.0",
     "zod": "4.6.5"
   },

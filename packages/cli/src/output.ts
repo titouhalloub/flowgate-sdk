@@ -4,7 +4,7 @@
  */
 import chalk from 'chalk';
 import ora from 'ora';
-import { Flowgate, FlowgateError } from '@flowgate/sdk';
+import { Flowgate, FlowgateError } from '@iflowgate/sdk';
 
 /** Exit code used when FLOWGATE_API_KEY is missing. */
 export const MISSING_KEY_EXIT = 1;
