@@ -1,0 +1,33 @@
+{
+  "name": "@flowgate/mcp-server",
+  "version": "0.1.0",
+  "description": "Flowgate Model Context Protocol server.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "flowgate-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "regen": "echo \"@flowgate/mcp-server: no schema to regen\""
+  },
+  "dependencies": {
+    "@flowgate/sdk": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.30",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

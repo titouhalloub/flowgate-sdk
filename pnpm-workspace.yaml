@@ -1,0 +1,13 @@
+packages:
+  - 'packages/*'
+
+# pnpm 12 requires an explicit allowlist for packages with build scripts.
+# esbuild (used by vitest) is safe: its postinstall only resolves the
+# platform-specific binary; it runs no arbitrary network or filesystem code.
+allowBuilds:
+  esbuild: true
+
+# Every dependency is exact-pinned; this version was published too recently for
+# pnpm 12's default release-age gate, so it is exempted.
+minimumReleaseAgeExclude:
+  - '@modelcontextprotocol/sdk@1.32.0'
