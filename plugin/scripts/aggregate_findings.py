@@ -27,7 +27,10 @@ SEVERITY_ORDER = {"blocking": 0, "review": 1, "info": 2}
 def parse_date(s):
     if not s:
         return None
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d
 
 
 def days_until(date_str):

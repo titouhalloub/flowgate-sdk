@@ -23,7 +23,7 @@ def main():
 
     print(f"**{name}** ({severity})")
     print(f"Package: {package}")
-    print(f"Effective: {start} → {end}")
+    print(f"Effective: {start} -> {end}")
     if label:
         print(f"Purpose: {label}")
     if r.get("condition"):
