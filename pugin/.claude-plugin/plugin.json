@@ -1,0 +1,34 @@
+{
+  "name": "flowgate-compliance",
+  "displayName": "Flowgate Compliance",
+  "description": "Compliance workflows for private capital: verify grants, scan issuers, brief LPs, screen for Shariah compliance. Built on the Flowgate governed execution layer.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Flowgate",
+    "url": "https://flowgate2.onrender.com"
+  },
+  "homepage": "https://flowgate2.onrender.com/redoc",
+  "repository": "https://github.com/titouhalloub/flowgate-sdk",
+  "license": "Apache-2.0",
+  "keywords": [
+    "private-capital",
+    "compliance",
+    "regtech",
+    "islamic-finance",
+    "cap-table",
+    "409a"
+  ],
+  "mcpServers": ["./mcp-servers/flowgate.json"],
+  "commands": [
+    "./commands/verify-grant.md",
+    "./commands/health-scan.md",
+    "./commands/lp-brief.md",
+    "./commands/shariah-screen.md"
+  ],
+  "skills": [
+    "./skills/grant-verification",
+    "./skills/compliance-scan",
+    "./skills/lp-briefing",
+    "./skills/shariah-screening"
+  ]
+}

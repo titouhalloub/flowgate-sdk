@@ -1,0 +1,10 @@
+{
+  "flowgate": {
+    "command": "npx",
+    "args": ["-y", "@iflowgate/mcp-server@^0.2"],
+    "env": {
+      "FLOWGATE_API_KEY": "${FLOWGATE_API_KEY}"
+    },
+    "description": "Flowgate API — cap tables, investors, capital calls, compliance rules"
+  }
+}
