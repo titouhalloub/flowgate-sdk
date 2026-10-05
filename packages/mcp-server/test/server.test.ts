@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,7 +44,15 @@ function fakeClient(issuers: string[]) {
       list: vi.fn().mockResolvedValue([]),
       portfolio: vi.fn().mockImplementation((id: string) => Promise.resolve({ investor_id: id, holdings: [] })),
     },
-    capTable: { get: vi.fn().mockImplementation((name: string) => Promise.resolve({ issuer_name: name })) },
+    capTable: {
+      get: vi.fn().mockImplementation((name: string, opts?: { asOf?: string }) =>
+        Promise.resolve({
+          issuer_name: name,
+          as_of: opts?.asOf ?? null,
+          total_fully_diluted_shares: opts?.asOf ? 650000 : 1000000,
+        }),
+      ),
+    },
     capitalCalls: { list: vi.fn().mockResolvedValue([]) },
     compliance: {
       rules: vi.fn().mockResolvedValue([]),
@@ -92,6 +101,7 @@ describe('flowgate MCP server', () => {
     expect(serverState.tools).toEqual([
       'verify_grant_compliance',
       'get_cap_table',
+      'get_cap_table_as_of',
       'get_cap_table_history',
       'list_investors',
       'get_investor_portfolio',
@@ -112,10 +122,10 @@ describe('flowgate MCP server', () => {
     expect(client.issuers.list).toHaveBeenCalledTimes(1);
   });
 
-  it('buildServer registers all eight tools', () => {
+  it('buildServer registers all nine tools', () => {
     const server = buildServer(fakeClient([]));
     expect(server).toBeDefined();
-    expect(serverState.tools).toHaveLength(8);
+    expect(serverState.tools).toHaveLength(9);
   });
 
   it('handleTool validates input and rejects wrong types without throwing', async () => {
@@ -205,6 +215,67 @@ describe('flowgate MCP server', () => {
     }
   });
 
+  // The handshake version must track package.json, not a hardcoded literal.
+  // Asserts against the real spawned binary, not the mocked McpServer, so a
+  // wrong path or a missing package.json in the published tarball fails here.
+  it('handshake serverInfo.version matches package.json', async () => {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const pkg = JSON.parse(
+      readFileSync(path.resolve(here, '..', 'package.json'), 'utf8'),
+    ) as { version: string };
+
+    const child = spawn(process.execPath, [path.resolve(here, '..', 'dist', 'index.js')], {
+      env: { ...process.env, FLOWGATE_API_KEY: 'test-key' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+    child.stdin.write(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test', version: '1.0' },
+        },
+      }) + '\n',
+    );
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('No handshake within 15s')), 15000);
+        const check = (): void => {
+          if (stdout.includes('"id":1') || stdout.includes('"id": 1')) {
+            clearTimeout(timer);
+            resolve();
+          }
+        };
+        child.stdout.on('data', check);
+        child.on('exit', (code) => {
+          if (!stdout.includes('"id"')) {
+            clearTimeout(timer);
+            reject(new Error(`Server exited (code ${code}) before responding`));
+          }
+        });
+      });
+
+      const line = stdout
+        .split('\n')
+        .find((l) => l.includes('"id":1') || l.includes('"id": 1'));
+      const parsed = JSON.parse(line ?? '{}') as {
+        result?: { serverInfo?: { version?: string } };
+      };
+      expect(parsed.result?.serverInfo?.version).toBe(pkg.version);
+    } finally {
+      child.kill();
+    }
+  });
+
   it('verify_grant_compliance appears in the tool list', () => {
     buildServer(fakeClient([]));
     expect(serverState.tools).toContain('verify_grant_compliance');
@@ -243,5 +314,36 @@ describe('flowgate MCP server', () => {
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toMatch(/^Error: /);
     expect(client.compliance.dryRunGrant).not.toHaveBeenCalled();
+  });
+
+  it('get_cap_table_as_of appears in the tool list', () => {
+    buildServer(fakeClient([]));
+    expect(serverState.tools).toContain('get_cap_table_as_of');
+  });
+
+  it('get_cap_table_as_of passes as_of through to the SDK', async () => {
+    const client = fakeClient([]);
+    const result = await handleTool(client, 'get_cap_table_as_of', {
+      issuer_name: 'Flowgate Systems Inc.',
+      as_of: '2026-06-30T00:00:00Z',
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect(client.capTable.get).toHaveBeenCalledWith('Flowgate Systems Inc.', {
+      asOf: '2026-06-30T00:00:00Z',
+    });
+    const parsed = JSON.parse(result.content[0]?.text ?? '{}');
+    expect(parsed.as_of).toBe('2026-06-30T00:00:00Z');
+  });
+
+  it('get_cap_table_as_of returns isError when issuer_name is missing', async () => {
+    const client = fakeClient([]);
+    const result = await handleTool(client, 'get_cap_table_as_of', {
+      as_of: '2026-06-30T00:00:00Z',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toMatch(/^Error: /);
+    expect(client.capTable.get).not.toHaveBeenCalled();
   });
 });

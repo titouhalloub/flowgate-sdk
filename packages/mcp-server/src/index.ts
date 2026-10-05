@@ -3,16 +3,33 @@
  * Flowgate MCP server — exposes read-only Flowgate API tools over stdio.
  *
  * Tools (mirroring openapi.json):
- *   get_cap_table, list_investors, get_investor_portfolio,
- *   list_capital_calls, list_compliance_rules, list_issuers
+ *   get_cap_table, get_cap_table_as_of, get_cap_table_history,
+ *   list_investors, get_investor_portfolio, list_capital_calls,
+ *   list_compliance_rules, verify_grant_compliance, list_issuers
  *
  * Reads FLOWGATE_API_KEY at startup; exits 1 with a stderr message if missing.
  */
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { Flowgate } from '@iflowgate/sdk';
+
+/**
+ * Version reported in the MCP handshake, read from package.json so it cannot
+ * drift from the published package. `import.meta.url` points at
+ * dist/index.js when this module runs, so one level up is the package root.
+ * npm always includes package.json in the tarball regardless of "files".
+ */
+const PKG = JSON.parse(
+  readFileSync(
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json'),
+    'utf8',
+  ),
+) as { version: string };
+
 
 /**
  * The subset of the SDK used by the MCP tools. Typed structurally so tests
@@ -20,7 +37,7 @@ import { Flowgate } from '@iflowgate/sdk';
  */
 export interface FlowgateLike {
   capTable: {
-    get: (issuerName: string) => Promise<unknown>;
+    get: (issuerName: string, opts?: { asOf?: string }) => Promise<unknown>;
     history: (issuerName: string, opts?: { months?: number; interval?: 'monthly' | 'weekly' }) => Promise<unknown>;
   };
   investors: { list: () => Promise<unknown>; portfolio: (id: string) => Promise<unknown> };
@@ -108,6 +125,26 @@ const TOOLS: ToolSpec[] = [
     run: async (client, args) => toToolResult(await client.capTable.get(String(args['issuer_name']))),
   },
   {
+    name: 'get_cap_table_as_of',
+    description:
+      "Reconstruct an issuer's cap table as of any historical date by replaying " +
+      'the event log. Returns total fully diluted shares, holders, and ownership ' +
+      'percentages for the requested point in time. Use this to answer questions ' +
+      "like 'what did ownership look like on June 30?' or 'who held shares " +
+      "before the Series A closed?' The result is derived by replaying events, " +
+      'not read from a stored snapshot -- it is exact.',
+    schema: {
+      issuer_name: z.string().describe('Issuer name'),
+      as_of: z.string().describe('ISO 8601 datetime. Any historical date.'),
+    },
+    run: async (client, args) =>
+      toToolResult(
+        await client.capTable.get(String(args['issuer_name']), {
+          asOf: String(args['as_of']),
+        }),
+      ),
+  },
+  {
     name: 'get_cap_table_history',
     description:
       "Monthly or weekly snapshots of an issuer's cap table, showing how fully " +
@@ -178,7 +215,7 @@ export async function handleTool(client: FlowgateLike, name: string, args: Recor
 
 /** Creates an McpServer with every Flowgate tool registered. */
 export function buildServer(client: FlowgateLike): McpServer {
-  const server = new McpServer({ name: 'flowgate', version: '0.1.0' });
+  const server = new McpServer({ name: 'flowgate', version: PKG.version });
   for (const tool of TOOLS) {
     // The SDK's ToolCallback generics are far stricter than the runtime
     // contract; our wrapper enforces the real contract (validate + never

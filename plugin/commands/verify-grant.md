@@ -28,7 +28,10 @@ If any required field is missing, ask for it before proceeding. Do not guess.
      empty, say so explicitly — do not list rules that did not run.
 3. If the response says the grant would be rejected:
    - Report the rejection prominently.
-   - Show the exact rule name, effective window, and reason from the API.
+   - If `rule_evaluations` is empty (as it is today), report only the 409A
+     gate result and the FMV used. Do not claim other rules were evaluated.
+     Do not reference a rule name or effective window — they are not present
+     in the response.
    - Do NOT soften or rephrase the compliance detail.
 4. Show the current FMV and its effective date from the response.
 

@@ -242,4 +242,40 @@ describe('Flowgate SDK', () => {
     expect(data.would_be_recorded).toBe(false);
     expect(data.rejection_reason).toContain('409A');
   });
+
+  it('capTable.get sends no query param when asOf is omitted', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValue(jsonResponse(200, { total_fully_diluted_shares: 1000000 }));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    await flowgate.capTable.get('Flowgate Systems Inc.');
+
+    const { url } = lastFetchCall();
+    expect(url).toBe(`${DEFAULT_BASE_URL}/cap-table/Flowgate%20Systems%20Inc.`);
+    expect(url).not.toContain('as_of');
+  });
+
+  it('capTable.get sends as_of when asOf is supplied', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValue(jsonResponse(200, { total_fully_diluted_shares: 650000 }));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    await flowgate.capTable.get('Flowgate Systems Inc.', { asOf: '2026-06-30T00:00:00Z' });
+
+    const { url } = lastFetchCall();
+    const parsed = new URL(url);
+    expect(parsed.pathname).toBe('/cap-table/Flowgate%20Systems%20Inc.');
+    expect(parsed.searchParams.get('as_of')).toBe('2026-06-30T00:00:00Z');
+  });
+
+  it('capTable.get accepts an empty options object without adding a query param', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValue(jsonResponse(200, {}));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    await flowgate.capTable.get('Acme', {});
+
+    const { url } = lastFetchCall();
+    expect(new URL(url).searchParams.has('as_of')).toBe(false);
+  });
 });

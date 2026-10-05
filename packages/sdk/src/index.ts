@@ -72,6 +72,16 @@ export interface ListProposalsQuery {
   status?: string;
 }
 
+/** Options for ``capTable.get``. */
+export interface CapTableOptions {
+  /**
+   * Reconstructs the cap table as it stood at this ISO 8601 datetime by
+   * replaying the event log, instead of returning the current position.
+   * Omit for the live cap table.
+   */
+  asOf?: string;
+}
+
 /** Options for ``capTable.history``. */
 export interface CapTableHistoryOptions {
   months?: number;
@@ -156,7 +166,7 @@ export class Flowgate {
 
   /** Cap-table reads and proposal review. */
   readonly capTable: {
-    get: (issuerName: string) => Promise<paths['/cap-table/{issuer_name}']['get']['responses']['200']['content']['application/json']>;
+    get: (issuerName: string, opts?: CapTableOptions) => Promise<paths['/cap-table/{issuer_name}']['get']['responses']['200']['content']['application/json']>;
     history: (issuerName: string, opts?: CapTableHistoryOptions) => Promise<paths['/cap-table/{issuer_name}/history']['get']['responses']['200']['content']['application/json']>;
     proposals: (query?: ListProposalsQuery) => Promise<paths['/cap-table-proposals']['get']['responses']['200']['content']['application/json']>;
     approveProposal: (id: string, opts: ProposalReviewOptions) => Promise<paths['/cap-table-proposals/{proposal_id}/approve']['post']['responses']['200']['content']['application/json']>;
@@ -225,8 +235,16 @@ export class Flowgate {
     };
 
     this.capTable = {
-      get: (issuerName) =>
-        wrap(ENDPOINTS.capTable, client.GET(ENDPOINTS.capTable, { params: { path: { issuer_name: issuerName } } })),
+      get: (issuerName, opts) =>
+        wrap(
+          ENDPOINTS.capTable,
+          client.GET(ENDPOINTS.capTable, {
+            params: {
+              path: { issuer_name: issuerName },
+              query: opts?.asOf ? { as_of: opts.asOf } : {},
+            },
+          }),
+        ),
       history: (issuerName, opts) =>
         wrap(
           ENDPOINTS.capTableHistory,
