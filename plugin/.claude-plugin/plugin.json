@@ -1,7 +1,7 @@
 {
-  "name": "flowgate-compliance",
-  "displayName": "Flowgate Compliance",
-  "description": "Compliance workflows for private capital: verify grants, scan issuers, brief LPs, screen for Shariah compliance. Built on the Flowgate governed execution layer.",
+  "name": "flowgate",
+  "displayName": "Flowgate for Private Capital",
+  "description": "The operational and compliance layer for private capital: grant verification, compliance scanning, LP briefings, and Shariah screening. Verify grants before they hit the ledger, surface regulatory flags across an issuer, prepare an LP for a meeting, and screen an Islamic fund. Built on the Flowgate governed execution layer.",
   "version": "0.1.0",
   "author": {
     "name": "Flowgate",
@@ -18,7 +18,9 @@
     "cap-table",
     "409a"
   ],
-  "mcpServers": ["./mcp-servers/flowgate.json"],
+  "mcpServers": [
+    "./mcp-servers/flowgate.json"
+  ],
   "commands": [
     "./commands/verify-grant.md",
     "./commands/health-scan.md",

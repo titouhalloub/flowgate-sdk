@@ -1,8 +1,8 @@
-# Flowgate Compliance for Claude
+# Flowgate for Private Capital
 
-Compliance workflows for private capital. Verify grants before they hit the
-ledger, scan every issuer for regulatory flags, brief LPs in one prompt, and
-screen portfolios for Shariah compliance.
+The operational and compliance layer for private capital. Verify grants
+before they hit the ledger, scan every issuer for regulatory flags, brief LPs
+in one prompt, and screen Islamic funds for Shariah compliance.
 
 > **Status:** Scaffold only. The commands reference MCP tools
 > (`verify_grant_compliance`, `compliance_health_scan`, `prepare_lp_brief`,
@@ -11,7 +11,7 @@ screen portfolios for Shariah compliance.
 
 ## What it does
 
-Four workflows, built on the Flowgate governed execution layer:
+Four workflows spanning the operational and compliance surface, built on the Flowgate governed execution layer:
 
 | Command | What it does |
 |---|---|
