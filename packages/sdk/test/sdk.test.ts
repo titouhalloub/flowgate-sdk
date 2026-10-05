@@ -158,4 +158,88 @@ describe('Flowgate SDK', () => {
     const { url } = lastFetchCall();
     expect(url).toBe(`${DEFAULT_BASE_URL}/cap-table/Acme/history?months=6&interval=monthly`);
   });
+
+  it('dryRunGrant posts to the right URL with the right body', async () => {
+    // openapi-fetch hands `fetch` a Request, so the method and body live on
+    // the Request itself rather than in an init argument.
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    let captured: Request | undefined;
+    fetchMock.mockImplementation((input: unknown) => {
+      captured = input as Request;
+      return Promise.resolve(jsonResponse(200, { compliant: true }));
+    });
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    await flowgate.compliance.dryRunGrant({
+      issuer_name: 'Acme',
+      holder_id: 'h1',
+      security_id: 's1',
+      quantity: 100,
+      price_per_share: 2.5,
+      event_type: 'issuance',
+    });
+
+    expect(captured).toBeDefined();
+    expect(captured?.url).toBe(`${DEFAULT_BASE_URL}/compliance/dry-run-grant`);
+    expect(captured?.method.toUpperCase()).toBe('POST');
+    const sent = JSON.parse(await captured!.clone().text()) as Record<string, unknown>;
+    expect(sent).toEqual({
+      issuer_name: 'Acme',
+      holder_id: 'h1',
+      security_id: 's1',
+      quantity: 100,
+      price_per_share: 2.5,
+      event_type: 'issuance',
+    });
+  });
+
+  it('dryRunGrant returns typed data on 200', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    const payload = {
+      compliant: true,
+      would_be_recorded: true,
+      rejection_reason: null,
+      rule_evaluations: [],
+      current_fmv: 2.5,
+      fmv_effective_date: '2026-08-01T00:00:00Z',
+      fmv_stale: false,
+      evaluated_at: '2026-10-05T00:00:00Z',
+    };
+    fetchMock.mockResolvedValue(jsonResponse(200, payload));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    const data = await flowgate.compliance.dryRunGrant({
+      issuer_name: 'Acme', holder_id: 'h1', security_id: 's1',
+      quantity: 100, price_per_share: 2.5, event_type: 'issuance',
+    });
+
+    expect(data).toEqual(payload);
+    expect(data.compliant).toBe(true);
+  });
+
+  it('dryRunGrant surfaces a 200 with compliant=false as data, not an error', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    const payload = {
+      compliant: false,
+      would_be_recorded: false,
+      rejection_reason: 'Strike price 1.0 is below the 409A fair market value of 2.5',
+      rule_evaluations: [],
+      current_fmv: 2.5,
+      fmv_effective_date: '2026-08-01T00:00:00Z',
+      fmv_stale: false,
+      evaluated_at: '2026-10-05T00:00:00Z',
+    };
+    fetchMock.mockResolvedValue(jsonResponse(200, payload));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    // A non-compliant verdict is a successful 200 -- it must not throw.
+    const data = await flowgate.compliance.dryRunGrant({
+      issuer_name: 'Acme', holder_id: 'h1', security_id: 's1',
+      quantity: 100, price_per_share: 1.0, event_type: 'issuance',
+    });
+
+    expect(data.compliant).toBe(false);
+    expect(data.would_be_recorded).toBe(false);
+    expect(data.rejection_reason).toContain('409A');
+  });
 });

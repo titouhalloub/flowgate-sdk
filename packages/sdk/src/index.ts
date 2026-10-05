@@ -61,6 +61,7 @@ const ENDPOINTS = {
   capitalCallsOverdue: '/capital-calls/overdue',
   capitalCallPayments: '/capital-calls/{call_id}/payments',
   complianceRules: '/compliance/rules',
+  dryRunGrant: '/compliance/dry-run-grant',
   complianceRule: '/compliance/rules/{package_name}/{rule_name}',
   issuers: '/issuers',
 } as const;
@@ -185,6 +186,7 @@ export class Flowgate {
     rules: () => Promise<paths['/compliance/rules']['get']['responses']['200']['content']['application/json']>;
     getRule: (pkg: string, rule: string) => Promise<paths['/compliance/rules/{package_name}/{rule_name}']['get']['responses']['200']['content']['application/json']>;
     createRule: (body: paths['/compliance/rules']['post']['requestBody']['content']['application/json']) => Promise<paths['/compliance/rules']['post']['responses']['201']['content']['application/json']>;
+    dryRunGrant: (body: paths['/compliance/dry-run-grant']['post']['requestBody']['content']['application/json']) => Promise<paths['/compliance/dry-run-grant']['post']['responses']['200']['content']['application/json']>;
   };
 
   /** Issuer reads. */
@@ -281,6 +283,8 @@ export class Flowgate {
           client.GET(ENDPOINTS.complianceRule, { params: { path: { package_name: pkg, rule_name: rule } } }),
         ),
       createRule: (body) => wrap(ENDPOINTS.complianceRules, client.POST(ENDPOINTS.complianceRules, { body })),
+      dryRunGrant: (body) =>
+        wrap(ENDPOINTS.dryRunGrant, client.POST(ENDPOINTS.dryRunGrant, { body })),
     };
 
     this.issuers = {

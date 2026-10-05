@@ -12,7 +12,19 @@ const fakeClient = {
   },
   capTable: { get: vi.fn() },
   capitalCalls: { list: vi.fn().mockResolvedValue([]) },
-  compliance: { rules: vi.fn().mockResolvedValue([]) },
+  compliance: {
+    rules: vi.fn().mockResolvedValue([]),
+    dryRunGrant: vi.fn().mockResolvedValue({
+      compliant: false,
+      would_be_recorded: false,
+      rejection_reason: 'below the 409A fair market value',
+      rule_evaluations: [],
+      current_fmv: 2.5,
+      fmv_effective_date: '2026-08-01T00:00:00Z',
+      fmv_stale: false,
+      evaluated_at: '2026-10-05T00:00:00Z',
+    }),
+  },
 };
 
 vi.mock('@iflowgate/sdk', () => {
@@ -138,5 +150,33 @@ describe('flowgate CLI', () => {
     const line = firstJsonLine(result.stdout, 'inv-1');
     expect(JSON.parse(line)).toEqual({ investor_id: 'inv-1', investor_name: 'Alice Angel', holdings: [] });
     expect(fakeClient.investors.portfolio).toHaveBeenCalledWith('inv-1');
+  });
+
+  it('compliance verify-grant sends the parsed options and prints the verdict', async () => {
+    const result = await invoke([
+      'node', 'flowgate', 'compliance', 'verify-grant',
+      '--issuer', 'Acme Inc',
+      '--holder', 'h1',
+      '--security', 's1',
+      '--quantity', '50000',
+      '--price', '1.00',
+      '--event-type', 'issuance',
+      '--json',
+    ]);
+
+    expect(result.code).toBe(0);
+    expect(fakeClient.compliance.dryRunGrant).toHaveBeenCalledWith({
+      issuer_name: 'Acme Inc',
+      holder_id: 'h1',
+      security_id: 's1',
+      quantity: 50000,
+      price_per_share: 1,
+      event_type: 'issuance',
+    });
+    const line = firstJsonLine(result.stdout, 'compliant');
+    expect(JSON.parse(line)).toMatchObject({
+      compliant: false,
+      rejection_reason: expect.stringContaining('409A'),
+    });
   });
 });

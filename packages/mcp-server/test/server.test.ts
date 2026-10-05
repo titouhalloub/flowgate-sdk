@@ -45,7 +45,19 @@ function fakeClient(issuers: string[]) {
     },
     capTable: { get: vi.fn().mockImplementation((name: string) => Promise.resolve({ issuer_name: name })) },
     capitalCalls: { list: vi.fn().mockResolvedValue([]) },
-    compliance: { rules: vi.fn().mockResolvedValue([]) },
+    compliance: {
+      rules: vi.fn().mockResolvedValue([]),
+      dryRunGrant: vi.fn().mockResolvedValue({
+        compliant: true,
+        would_be_recorded: true,
+        rejection_reason: null,
+        rule_evaluations: [],
+        current_fmv: 2.5,
+        fmv_effective_date: '2026-08-01T00:00:00Z',
+        fmv_stale: false,
+        evaluated_at: '2026-10-05T00:00:00Z',
+      }),
+    },
   };
 }
 
@@ -78,6 +90,7 @@ describe('flowgate MCP server', () => {
     expect(code).toBe(0);
     expect(serverState.connected?.kind).toBe('stdio');
     expect(serverState.tools).toEqual([
+      'verify_grant_compliance',
       'get_cap_table',
       'get_cap_table_history',
       'list_investors',
@@ -99,10 +112,10 @@ describe('flowgate MCP server', () => {
     expect(client.issuers.list).toHaveBeenCalledTimes(1);
   });
 
-  it('buildServer registers all seven tools', () => {
+  it('buildServer registers all eight tools', () => {
     const server = buildServer(fakeClient([]));
     expect(server).toBeDefined();
-    expect(serverState.tools).toHaveLength(7);
+    expect(serverState.tools).toHaveLength(8);
   });
 
   it('handleTool validates input and rejects wrong types without throwing', async () => {
@@ -190,5 +203,45 @@ describe('flowgate MCP server', () => {
     } finally {
       child.kill();
     }
+  });
+
+  it('verify_grant_compliance appears in the tool list', () => {
+    buildServer(fakeClient([]));
+    expect(serverState.tools).toContain('verify_grant_compliance');
+  });
+
+  it('verify_grant_compliance returns the API response as content', async () => {
+    const client = fakeClient([]);
+    const result = await handleTool(client, 'verify_grant_compliance', {
+      issuer_name: 'Acme',
+      holder_id: 'h1',
+      security_id: 's1',
+      quantity: 100,
+      price_per_share: 2.5,
+      event_type: 'issuance',
+    });
+
+    expect(result.isError).toBeUndefined();
+    const parsed = JSON.parse(result.content[0]?.text ?? '{}');
+    expect(parsed.compliant).toBe(true);
+    expect(client.compliance.dryRunGrant).toHaveBeenCalledWith(
+      expect.objectContaining({ issuer_name: 'Acme', price_per_share: 2.5 }),
+    );
+  });
+
+  it('verify_grant_compliance rejects an invalid event_type', async () => {
+    const client = fakeClient([]);
+    const result = await handleTool(client, 'verify_grant_compliance', {
+      issuer_name: 'Acme',
+      holder_id: 'h1',
+      security_id: 's1',
+      quantity: 100,
+      price_per_share: 2.5,
+      event_type: 'foobar',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toMatch(/^Error: /);
+    expect(client.compliance.dryRunGrant).not.toHaveBeenCalled();
   });
 });

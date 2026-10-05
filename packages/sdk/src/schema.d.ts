@@ -292,6 +292,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/compliance/dry-run-grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dry Run Grant
+         * @description Evaluate a hypothetical grant without writing to the ledger.
+         *
+         *     Read-only. Runs the same Section 409A gate that POST /cap-table-events
+         *     runs, and returns what that route *would* have done. Nothing is
+         *     persisted -- no cap_table_events row, no evaluation, no ledger entry.
+         */
+        post: operations["dry_run_grant_compliance_dry_run_grant_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cap-table/{issuer_name}/history": {
         parameters: {
             query?: never;
@@ -1802,6 +1826,54 @@ export interface components {
              */
             filename: string;
         };
+        /**
+         * GrantDryRunIn
+         * @description A hypothetical grant to evaluate. Nothing here is persisted.
+         */
+        GrantDryRunIn: {
+            /** Issuer Name */
+            issuer_name: string;
+            /** Holder Id */
+            holder_id: string;
+            /** Security Id */
+            security_id: string;
+            /** Quantity */
+            quantity: number;
+            /** Price Per Share */
+            price_per_share: number;
+            /** Event Type */
+            event_type: string;
+            /** Effective Date */
+            effective_date?: string | null;
+        };
+        /** GrantDryRunOut */
+        GrantDryRunOut: {
+            /** Compliant */
+            compliant: boolean;
+            /** Would Be Recorded */
+            would_be_recorded: boolean;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+            /**
+             * Rule Evaluations
+             * @default []
+             */
+            rule_evaluations: components["schemas"]["RuleEvaluation"][];
+            /** Current Fmv */
+            current_fmv?: number | null;
+            /** Fmv Effective Date */
+            fmv_effective_date?: string | null;
+            /**
+             * Fmv Stale
+             * @default false
+             */
+            fmv_stale: boolean;
+            /**
+             * Evaluated At
+             * Format: date-time
+             */
+            evaluated_at: string;
+        };
         /** GrantVestingOut */
         GrantVestingOut: {
             /** Event Id */
@@ -2274,6 +2346,19 @@ export interface components {
             pre_safe_shares: number;
             /** Options Pool */
             options_pool: number;
+        };
+        /** RuleEvaluation */
+        RuleEvaluation: {
+            /** Rule Name */
+            rule_name: string;
+            /** Package Name */
+            package_name: string;
+            /** Severity */
+            severity: string;
+            /** Passed */
+            passed: boolean;
+            /** Detail */
+            detail?: string | null;
         };
         /** SecurityCreate */
         SecurityCreate: {
@@ -3294,6 +3379,60 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dry_run_grant_compliance_dry_run_grant_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantDryRunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantDryRunOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

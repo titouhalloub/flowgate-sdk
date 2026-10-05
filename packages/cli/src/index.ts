@@ -181,6 +181,59 @@ export function buildProgram(): Command {
   );
 
   const compliance = program.command('compliance').description('Compliance operations');
+  jsonOption(
+    compliance
+      .command('verify-grant')
+      .description('Dry-run an option or warrant grant against the 409A gate')
+      .requiredOption('--issuer <name>', 'issuer name')
+      .requiredOption('--holder <id>', 'investor receiving the grant')
+      .requiredOption('--security <id>', 'security being granted')
+      .requiredOption('--quantity <n>', 'number of shares')
+      .requiredOption('--price <n>', 'strike price per share')
+      .option('--event-type <type>', 'issuance | exercise | conversion', 'issuance'),
+  ).action(
+    async (options: {
+      json?: boolean;
+      issuer: string;
+      holder: string;
+      security: string;
+      quantity: string;
+      price: string;
+      eventType: string;
+    }) => {
+      const json = options.json ?? false;
+      await runAction(json, async () => {
+        const quantity = Number.parseFloat(options.quantity);
+        const price = Number.parseFloat(options.price);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          throw new CliError(chalk.red('--quantity must be a positive number.'));
+        }
+        if (!Number.isFinite(price) || price < 0) {
+          throw new CliError(chalk.red('--price must be zero or greater.'));
+        }
+        const eventType = (['issuance', 'exercise', 'conversion'] as const).find(
+          (t) => t === options.eventType,
+        );
+        if (eventType === undefined) {
+          throw new CliError(
+            chalk.red('--event-type must be one of: issuance, exercise, conversion'),
+          );
+        }
+        const { client } = makeClient(json);
+        const data = await withSpinner(json, `Verifying grant for ${options.issuer}`, () =>
+          client.compliance.dryRunGrant({
+            issuer_name: options.issuer,
+            holder_id: options.holder,
+            security_id: options.security,
+            quantity,
+            price_per_share: price,
+            event_type: eventType,
+          }),
+        );
+        printResult(json, data);
+      });
+    },
+  );
   jsonOption(compliance.command('rules').description('List compliance rules')).action(async (options: { json?: boolean }) => {
     const json = options.json ?? false;
     await runAction(json, async () => {

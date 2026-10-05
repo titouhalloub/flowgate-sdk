@@ -25,7 +25,18 @@ export interface FlowgateLike {
   };
   investors: { list: () => Promise<unknown>; portfolio: (id: string) => Promise<unknown> };
   capitalCalls: { list: () => Promise<unknown> };
-  compliance: { rules: () => Promise<unknown> };
+  compliance: {
+    rules: () => Promise<unknown>;
+    dryRunGrant: (body: {
+      issuer_name: string;
+      holder_id: string;
+      security_id: string;
+      quantity: number;
+      price_per_share: number;
+      event_type: 'issuance' | 'exercise' | 'conversion';
+      effective_date?: string;
+    }) => Promise<unknown>;
+  };
   issuers: { list: () => Promise<unknown> };
 }
 
@@ -53,6 +64,43 @@ interface ToolSpec {
 }
 
 const TOOLS: ToolSpec[] = [
+  {
+    name: 'verify_grant_compliance',
+    description:
+      'Dry-run an option or warrant grant against the 409A gate before ' +
+      'recording it. Returns whether the grant would be accepted, the ' +
+      'applicable fair market value, and -- if rejected -- the exact ' +
+      'compliance reason. Use this before cap_table_events.create to ' +
+      'avoid recording a non-compliant grant.',
+    schema: {
+      issuer_name: z.string().describe('Issuer name'),
+      holder_id: z.string().describe('Investor receiving the grant'),
+      security_id: z.string().describe('Security being granted'),
+      quantity: z.number().positive().describe('Number of shares'),
+      price_per_share: z.number().nonnegative().describe('Strike price per share'),
+      event_type: z
+        .enum(['issuance', 'exercise', 'conversion'])
+        .describe('Type of event being proposed'),
+      effective_date: z.string().optional().describe('Defaults to now'),
+    },
+    run: async (client, args) =>
+      toToolResult(
+        await client.compliance.dryRunGrant({
+          issuer_name: String(args['issuer_name']),
+          holder_id: String(args['holder_id']),
+          security_id: String(args['security_id']),
+          quantity: Number(args['quantity']),
+          price_per_share: Number(args['price_per_share']),
+          event_type: String(args['event_type']) as
+            | 'issuance'
+            | 'exercise'
+            | 'conversion',
+          ...(typeof args['effective_date'] === 'string'
+            ? { effective_date: args['effective_date'] }
+            : {}),
+        }),
+      ),
+  },
   {
     name: 'get_cap_table',
     description: 'Get the cap table for an issuer.',

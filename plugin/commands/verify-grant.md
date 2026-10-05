@@ -24,7 +24,8 @@ If any required field is missing, ask for it before proceeding. Do not guess.
 1. Call the `verify_grant_compliance` MCP tool with the parsed inputs.
 2. If the response says the grant would pass:
    - Report: "Compliant. This grant would be recorded."
-   - Show the applicable rules that were evaluated.
+   - Report the rules that were actually evaluated. If `rule_evaluations` is
+     empty, say so explicitly — do not list rules that did not run.
 3. If the response says the grant would be rejected:
    - Report the rejection prominently.
    - Show the exact rule name, effective window, and reason from the API.
@@ -50,7 +51,14 @@ If rejected:
 > [the exact detail message from the API]
 
 **Applicable rules:**
-- [rule name] — effective [date] — severity [level]
+- If `rule_evaluations` is non-empty, list them:
+  - [rule name] — effective [date] — severity [level]
+- If `rule_evaluations` is empty, write exactly:
+  - Only the 409A gate is applied to grants today.
+
+Never claim a rule was evaluated when it is not present in
+`rule_evaluations`. Also report the FMV the gate used and its effective
+date, read from `current_fmv` and `fmv_effective_date`.
 
 **Next step:** [what the user should do — adjust the price, update the 409A, or proceed]
 
