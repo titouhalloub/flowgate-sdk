@@ -103,4 +103,59 @@ describe('Flowgate SDK', () => {
     const { url } = lastFetchCall();
     expect(url).toBe(`${DEFAULT_BASE_URL}/investors/inv-1/portfolio`);
   });
+
+  it('capTable.history sends months and interval in the query string', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValue(jsonResponse(200, { issuer_name: 'Acme', snapshots: [] }));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    await flowgate.capTable.history('Acme', { months: 3, interval: 'weekly' });
+
+    const { url } = lastFetchCall();
+    expect(url).toContain('/cap-table/Acme/history');
+    expect(url).toContain('months=3');
+    expect(url).toContain('interval=weekly');
+  });
+
+  it('capTable.history defaults to months=6 and interval=monthly', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValue(jsonResponse(200, { issuer_name: 'Acme', snapshots: [] }));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    await flowgate.capTable.history('Acme');
+
+    const { url } = lastFetchCall();
+    expect(url).toContain('months=6');
+    expect(url).toContain('interval=monthly');
+  });
+
+  it('capTable.history returns typed data on 200', async () => {
+    const fetchMock = globalThis.fetch as unknown as FetchMock;
+    const payload = {
+      issuer_name: 'Acme',
+      as_of: '2026-10-05T00:00:00Z',
+      interval: 'monthly',
+      snapshots: [
+        {
+          date: '2026-09-30',
+          total_fully_diluted_shares: 1000,
+          total_vested_shares: 1000,
+          total_unvested_shares: 0,
+          holder_count: 1,
+          top_holders: [
+            { holder_id: 'h1', holder_name: 'Ada', shares: 1000, ownership_percent: 100 },
+          ],
+          other_holders_total: 0,
+        },
+      ],
+    };
+    fetchMock.mockResolvedValue(jsonResponse(200, payload));
+
+    const flowgate = new Flowgate({ apiKey: 'test-key-123' });
+    const data = await flowgate.capTable.history('Acme', { months: 6 });
+
+    expect(data).toEqual(payload);
+    const { url } = lastFetchCall();
+    expect(url).toBe(`${DEFAULT_BASE_URL}/cap-table/Acme/history?months=6&interval=monthly`);
+  });
 });

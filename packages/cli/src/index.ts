@@ -9,6 +9,7 @@
 import { pathToFileURL } from 'node:url';
 import { Command } from 'commander';
 import { Flowgate } from '@iflowgate/sdk';
+import chalk from 'chalk';
 import { CliError, handleError, printResult, requireClient, withSpinner } from './output.js';
 
 /** Runs an async command body, converting thrown errors into exit codes. */
@@ -59,6 +60,30 @@ export function buildProgram(): Command {
       await runAction(json, async () => {
         const { client } = makeClient(json);
         const data = await withSpinner(json, `Fetching cap table for ${issuer}`, () => client.capTable.get(issuer));
+        printResult(json, data);
+      });
+    },
+  );
+  jsonOption(
+    capTable
+      .command('history')
+      .description('Monthly or weekly snapshots of the cap table')
+      .argument('<issuer>', 'issuer name')
+      .option('-m, --months <n>', 'Number of months (1-24)', '6')
+      .option('-i, --interval <type>', 'monthly or weekly', 'monthly'),
+  ).action(
+    async (issuer: string, options: { json?: boolean; months: string; interval: string }) => {
+      const json = options.json ?? false;
+      await runAction(json, async () => {
+        const months = Number.parseInt(options.months, 10);
+        if (!Number.isFinite(months) || months < 1 || months > 24) {
+          throw new CliError(chalk.red('--months must be an integer between 1 and 24.'));
+        }
+        const interval = options.interval === 'weekly' ? 'weekly' : 'monthly';
+        const { client } = makeClient(json);
+        const data = await withSpinner(json, `Fetching cap table history for ${issuer}`, () =>
+          client.capTable.history(issuer, { months, interval }),
+        );
         printResult(json, data);
       });
     },

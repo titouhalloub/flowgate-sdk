@@ -19,7 +19,10 @@ import { Flowgate } from '@iflowgate/sdk';
  * can inject a fake without casting (production passes a real Flowgate).
  */
 export interface FlowgateLike {
-  capTable: { get: (issuerName: string) => Promise<unknown> };
+  capTable: {
+    get: (issuerName: string) => Promise<unknown>;
+    history: (issuerName: string, opts?: { months?: number; interval?: 'monthly' | 'weekly' }) => Promise<unknown>;
+  };
   investors: { list: () => Promise<unknown>; portfolio: (id: string) => Promise<unknown> };
   capitalCalls: { list: () => Promise<unknown> };
   compliance: { rules: () => Promise<unknown> };
@@ -55,6 +58,26 @@ const TOOLS: ToolSpec[] = [
     description: 'Get the cap table for an issuer.',
     schema: { issuer_name: z.string().describe('Issuer name, e.g. "Flowgate Systems Inc."') },
     run: async (client, args) => toToolResult(await client.capTable.get(String(args['issuer_name']))),
+  },
+  {
+    name: 'get_cap_table_history',
+    description:
+      "Monthly or weekly snapshots of an issuer's cap table, showing how fully " +
+      'diluted shares and top holders evolved over time. Useful for trends, ' +
+      'investor reporting, and understanding the trajectory of a fund.',
+    schema: {
+      issuer_name: z.string().describe('Issuer name'),
+      months: z.number().int().min(1).max(24).optional().describe('1-24, default 6'),
+      interval: z.enum(['monthly', 'weekly']).optional().describe('default monthly'),
+    },
+    run: async (client, args) => {
+      const opts: { months?: number; interval?: 'monthly' | 'weekly' } = {};
+      if (typeof args['months'] === 'number') opts.months = args['months'];
+      if (args['interval'] === 'weekly' || args['interval'] === 'monthly') {
+        opts.interval = args['interval'];
+      }
+      return toToolResult(await client.capTable.history(String(args['issuer_name']), opts));
+    },
   },
   {
     name: 'list_investors',

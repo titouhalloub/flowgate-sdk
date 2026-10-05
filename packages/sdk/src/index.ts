@@ -44,8 +44,13 @@ export class FlowgateError extends Error {
 }
 
 /** Path of each endpoint used by this client (mirrors openapi.json). */
+/** Defaults applied by ``capTable.history`` when the caller omits them. */
+export const DEFAULT_HISTORY_MONTHS = 6;
+export const DEFAULT_HISTORY_INTERVAL = 'monthly' as const;
+
 const ENDPOINTS = {
   capTable: '/cap-table/{issuer_name}',
+  capTableHistory: '/cap-table/{issuer_name}/history',
   proposals: '/cap-table-proposals',
   approveProposal: '/cap-table-proposals/{proposal_id}/approve',
   rejectProposal: '/cap-table-proposals/{proposal_id}/reject',
@@ -64,6 +69,12 @@ const ENDPOINTS = {
 /** Query params accepted by `GET /cap-table-proposals`. */
 export interface ListProposalsQuery {
   status?: string;
+}
+
+/** Options for ``capTable.history``. */
+export interface CapTableHistoryOptions {
+  months?: number;
+  interval?: 'monthly' | 'weekly';
 }
 
 /**
@@ -145,6 +156,7 @@ export class Flowgate {
   /** Cap-table reads and proposal review. */
   readonly capTable: {
     get: (issuerName: string) => Promise<paths['/cap-table/{issuer_name}']['get']['responses']['200']['content']['application/json']>;
+    history: (issuerName: string, opts?: CapTableHistoryOptions) => Promise<paths['/cap-table/{issuer_name}/history']['get']['responses']['200']['content']['application/json']>;
     proposals: (query?: ListProposalsQuery) => Promise<paths['/cap-table-proposals']['get']['responses']['200']['content']['application/json']>;
     approveProposal: (id: string, opts: ProposalReviewOptions) => Promise<paths['/cap-table-proposals/{proposal_id}/approve']['post']['responses']['200']['content']['application/json']>;
     rejectProposal: (id: string, opts: ProposalReviewOptions) => Promise<paths['/cap-table-proposals/{proposal_id}/reject']['post']['responses']['200']['content']['application/json']>;
@@ -213,6 +225,19 @@ export class Flowgate {
     this.capTable = {
       get: (issuerName) =>
         wrap(ENDPOINTS.capTable, client.GET(ENDPOINTS.capTable, { params: { path: { issuer_name: issuerName } } })),
+      history: (issuerName, opts) =>
+        wrap(
+          ENDPOINTS.capTableHistory,
+          client.GET(ENDPOINTS.capTableHistory, {
+            params: {
+              path: { issuer_name: issuerName },
+              query: {
+                months: opts?.months ?? DEFAULT_HISTORY_MONTHS,
+                interval: opts?.interval ?? DEFAULT_HISTORY_INTERVAL,
+              },
+            },
+          }),
+        ),
       proposals: (query) =>
         wrap(ENDPOINTS.proposals, client.GET(ENDPOINTS.proposals, query !== undefined ? { params: { query } } : undefined)),
       approveProposal: (id, reviewOpts) =>

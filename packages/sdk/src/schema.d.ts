@@ -292,6 +292,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cap-table/{issuer_name}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Cap Table History
+         * @description Month-end snapshots of the cap table, produced by replaying events.
+         *
+         *     Each boundary calls ``compute_cap_table`` with that boundary as ``as_of``.
+         *     That re-queries and re-replays per snapshot -- O(N x M). Fine at this
+         *     scale; see TECH-DEBT.md.
+         *
+         *     An unknown issuer yields 200 with an empty ``snapshots`` list, matching
+         *     ``GET /cap-table/{issuer_name}`` rather than introducing a 404.
+         */
+        get: operations["get_cap_table_history_cap_table__issuer_name__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/valuations": {
         parameters: {
             query?: never;
@@ -1070,6 +1097,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Api Keys
+         * @description List API keys. Admins see every key; others see only their own.
+         *
+         *     Never exposes ``key`` or ``key_hash``.
+         */
+        get: operations["list_api_keys_api_keys_get"];
+        put?: never;
+        /**
+         * Create Api Key
+         * @description Mint a key for the caller. The plaintext is returned exactly once.
+         */
+        post: operations["create_api_key_api_keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api-keys/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Api Key
+         * @description Revoke a key. Idempotent: revoking twice is still 200.
+         */
+        delete: operations["revoke_api_key_api_keys__key_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{path}": {
         parameters: {
             query?: never;
@@ -1094,6 +1167,71 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ApiKeyCreate */
+        ApiKeyCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @default viewer
+             */
+            role: string;
+            /** Scopes */
+            scopes?: {
+                [key: string]: unknown;
+            };
+            /** Expires At */
+            expires_at?: string | null;
+        };
+        /**
+         * ApiKeyCreatedOut
+         * @description Creation response. ``key`` carries the plaintext exactly once.
+         */
+        ApiKeyCreatedOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Prefix */
+            prefix: string;
+            /** Role */
+            role: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+            /** Key */
+            key: string;
+        };
+        /** ApiKeyOut */
+        ApiKeyOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Prefix */
+            prefix: string;
+            /** Role */
+            role: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+        };
         /** AssistantAskRequest */
         AssistantAskRequest: {
             /** Question */
@@ -1195,6 +1333,51 @@ export interface components {
             is_repurchase: boolean;
             /** Repurchase Approver */
             repurchase_approver?: string | null;
+        };
+        /** CapTableHistoryHolder */
+        CapTableHistoryHolder: {
+            /** Holder Id */
+            holder_id: string;
+            /** Holder Name */
+            holder_name: string;
+            /** Shares */
+            shares: number;
+            /** Ownership Percent */
+            ownership_percent: number;
+        };
+        /** CapTableHistoryOut */
+        CapTableHistoryOut: {
+            /** Issuer Name */
+            issuer_name: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Interval */
+            interval: string;
+            /**
+             * Snapshots
+             * @default []
+             */
+            snapshots: components["schemas"]["CapTableHistorySnapshot"][];
+        };
+        /** CapTableHistorySnapshot */
+        CapTableHistorySnapshot: {
+            /** Date */
+            date: string;
+            /** Total Fully Diluted Shares */
+            total_fully_diluted_shares: number;
+            /** Total Vested Shares */
+            total_vested_shares: number;
+            /** Total Unvested Shares */
+            total_unvested_shares: number;
+            /** Holder Count */
+            holder_count: number;
+            /** Top Holders */
+            top_holders: components["schemas"]["CapTableHistoryHolder"][];
+            /** Other Holders Total */
+            other_holders_total: number;
         };
         /** CapTableOut */
         CapTableOut: {
@@ -3098,6 +3281,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CapTableOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_cap_table_history_cap_table__issuer_name__history_get: {
+        parameters: {
+            query?: {
+                months?: number;
+                interval?: string;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                issuer_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapTableHistoryOut"];
                 };
             };
             /** @description Bad Request */
@@ -5058,6 +5296,144 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_api_keys_api_keys_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyOut"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_key_api_keys_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiKeyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyCreatedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_api_key_api_keys__key_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                key_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
             /** @description Validation Error */

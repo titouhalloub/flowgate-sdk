@@ -79,6 +79,7 @@ describe('flowgate MCP server', () => {
     expect(serverState.connected?.kind).toBe('stdio');
     expect(serverState.tools).toEqual([
       'get_cap_table',
+      'get_cap_table_history',
       'list_investors',
       'get_investor_portfolio',
       'list_capital_calls',
@@ -98,10 +99,10 @@ describe('flowgate MCP server', () => {
     expect(client.issuers.list).toHaveBeenCalledTimes(1);
   });
 
-  it('buildServer registers all six tools', () => {
+  it('buildServer registers all seven tools', () => {
     const server = buildServer(fakeClient([]));
     expect(server).toBeDefined();
-    expect(serverState.tools).toHaveLength(6);
+    expect(serverState.tools).toHaveLength(7);
   });
 
   it('handleTool validates input and rejects wrong types without throwing', async () => {
